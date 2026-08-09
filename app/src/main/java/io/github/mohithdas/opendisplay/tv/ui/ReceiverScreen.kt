@@ -1,0 +1,232 @@
+package io.github.mohithdas.opendisplay.tv.ui
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.unit.dp
+import io.github.mohithdas.opendisplay.tv.R
+import io.github.mohithdas.opendisplay.tv.net.ListenerPhase
+import io.github.mohithdas.opendisplay.tv.net.ListenerState
+import io.github.mohithdas.opendisplay.tv.net.NsdPhase
+import io.github.mohithdas.opendisplay.tv.net.NsdState
+import io.github.mohithdas.opendisplay.tv.net.PeerSignal
+import io.github.mohithdas.opendisplay.tv.net.PhoneReceiver
+import io.github.mohithdas.opendisplay.tv.settings.FitMode
+import kotlin.math.roundToInt
+
+@Composable
+fun ReceiverScreen(receiver: PhoneReceiver) {
+    val listener by receiver.listenerState.collectAsState()
+    val nsd by receiver.nsdState.collectAsState()
+    val connected by receiver.connected.collectAsState()
+    val settings by receiver.settings.collectAsState()
+    val peerSignal by receiver.peerSignal.collectAsState()
+    val selection by receiver.displaySelection.collectAsState()
+    var videoDims by remember { mutableStateOf<VideoDims?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = showSettings) { showSettings = false }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .safeDrawingPadding(),
+    ) {
+        VideoViewport(
+            receiver = receiver,
+            videoDims = videoDims,
+            fallbackWidth = selection.pixels.width,
+            fallbackHeight = selection.pixels.height,
+            fitMode = settings.fitMode,
+            connected = connected,
+            onVideoDimsChanged = {
+                videoDims = it
+                receiver.setDecoderResolution(it.width, it.height)
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        if (!connected) {
+            Text(
+                text = listenerStatus(listener),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+            )
+            Text(
+                text = nsdStatus(nsd),
+                color = Color.LightGray,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.align(Alignment.Center).padding(top = 72.dp),
+            )
+        }
+
+        peerSignal?.let { signal ->
+            PeerSignalBanner(signal, Modifier.align(Alignment.TopCenter).padding(top = 24.dp))
+        }
+
+        if (connected && settings.performanceOverlay) {
+            PerfHud(receiver, Modifier.align(Alignment.TopStart).padding(8.dp))
+        }
+
+        TvActionButton(
+            text = stringResource(R.string.settings),
+            onClick = { showSettings = true },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
+        )
+    }
+
+    if (showSettings) SettingsDialog(receiver) { showSettings = false }
+}
+
+@Composable
+private fun VideoViewport(
+    receiver: PhoneReceiver,
+    videoDims: VideoDims?,
+    fallbackWidth: Int,
+    fallbackHeight: Int,
+    fitMode: FitMode,
+    connected: Boolean,
+    onVideoDimsChanged: (VideoDims) -> Unit,
+    modifier: Modifier,
+) {
+    Layout(
+        modifier = modifier.clipToBounds(),
+        content = {
+            VideoSurface(
+                receiver = receiver,
+                videoDims = videoDims,
+                connected = connected,
+                onVideoDimsChanged = onVideoDimsChanged,
+                modifier = Modifier.fillMaxSize(),
+            )
+            CursorOverlay(receiver, Modifier.fillMaxSize())
+        },
+    ) { measurables, constraints ->
+        val sourceWidth = videoDims?.width ?: fallbackWidth
+        val sourceHeight = videoDims?.height ?: fallbackHeight
+        val rect = VideoTransform.destination(
+            constraints.maxWidth,
+            constraints.maxHeight,
+            sourceWidth.coerceAtLeast(1),
+            sourceHeight.coerceAtLeast(1),
+            fitMode,
+        )
+        val childConstraints = androidx.compose.ui.unit.Constraints.fixed(
+            rect.width.roundToInt().coerceAtLeast(1),
+            rect.height.roundToInt().coerceAtLeast(1),
+        )
+        val children = measurables.map { it.measure(childConstraints) }
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            val x = rect.left.roundToInt()
+            val y = rect.top.roundToInt()
+            children.forEach { it.place(x, y) }
+        }
+    }
+}
+
+@Composable
+internal fun TvActionButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .onFocusChanged { focused = it.isFocused }
+            .border(
+                width = if (focused) 3.dp else 1.dp,
+                color = if (focused) Color.White else Color.Transparent,
+                shape = RoundedCornerShape(14.dp),
+            ),
+    ) { Text(text) }
+}
+
+@Composable
+private fun listenerStatus(state: ListenerState): String = when (state.phase) {
+    ListenerPhase.STARTING -> stringResource(R.string.listener_starting)
+    ListenerPhase.WAITING_FOR_NETWORK -> stringResource(R.string.listener_waiting_network)
+    ListenerPhase.LISTENING -> stringResource(
+        R.string.listener_listening,
+        state.addressAndPort ?: stringResource(R.string.not_available),
+    )
+    ListenerPhase.RETRYING -> pluralStringResource(
+        R.plurals.listener_retrying,
+        state.retrySeconds,
+        state.retrySeconds,
+    )
+    ListenerPhase.PORTS_UNAVAILABLE -> stringResource(R.string.listener_failed)
+    ListenerPhase.STOPPED -> stringResource(R.string.listener_stopped)
+}
+
+@Composable
+private fun nsdStatus(state: NsdState): String = when (state.phase) {
+    NsdPhase.IDLE -> stringResource(R.string.nsd_idle)
+    NsdPhase.REGISTERING -> stringResource(R.string.nsd_registering)
+    NsdPhase.REGISTERED -> stringResource(
+        R.string.nsd_registered,
+        state.registeredName ?: stringResource(R.string.app_name),
+    )
+    NsdPhase.RETRYING -> pluralStringResource(R.plurals.nsd_retrying, state.retrySeconds, state.retrySeconds)
+    NsdPhase.UNAVAILABLE -> stringResource(R.string.nsd_failed)
+}
+
+@Composable
+private fun PerfHud(receiver: PhoneReceiver, modifier: Modifier = Modifier) {
+    val perf by receiver.perf.collectAsState()
+    Text(
+        text = stringResource(
+            R.string.performance_format,
+            perf.fps,
+            perf.megabitsPerSecond,
+            perf.e2eP50Ms.toInt(),
+            perf.e2eP95Ms.toInt(),
+            perf.rttMs.toInt(),
+            perf.approximateMemoryMb,
+        ),
+        color = Color.White,
+        style = MaterialTheme.typography.labelSmall,
+        modifier = modifier
+            .background(Color.Black.copy(alpha = 0.65f), MaterialTheme.shapes.small)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    )
+}
+
+@Composable
+private fun PeerSignalBanner(signal: PeerSignal, modifier: Modifier = Modifier) {
+    val message = when (signal) {
+        PeerSignal.UpdateMac -> stringResource(R.string.peer_update_mac)
+        is PeerSignal.UpdateAndroid -> signal.message ?: stringResource(R.string.peer_update_android)
+        is PeerSignal.PeerReplaced -> stringResource(R.string.peer_replaced, signal.newAddress)
+    }
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        color = Color(0xFFB00020),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Text(message, color = Color.White, modifier = Modifier.padding(16.dp))
+    }
+}

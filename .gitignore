@@ -1,16 +1,17 @@
 *.iml
 .gradle/
+.toolchains/
 /local.properties
 .idea/
 .DS_Store
 /build
 /app/build
+/dist/
 /captures
 .externalNativeBuild
 .cxx
 
-# Working notes updated after every phase, deliberately not committed —
-# see CLAUDE.md.
+# Local working notes.
 /ESTADO_ATUAL.md
 local.properties
 
@@ -20,17 +21,19 @@ local.properties
 /keystore.properties
 *.jks
 *.keystore
+*.p12
+*.pem
+*.der
+signing/
 
-# Personal release script (pedido do usuário) — automatiza build+assinatura+
-# release no GitHub, mas fica só nesta máquina, não versionado.
+# Personal release helpers stay local.
 /release.sh
 
-# Config/doc do Claude Code — fica só local, não versionado (pedido do usuário).
+# Local agent configuration.
 /CLAUDE.md
 /.claude/
 
-# Espelho (desatualizado) do CLAUDE.md gerado por outra ferramenta de agente —
-# mesmo tratamento: só local, não versionado.
+# Local agent mirrors.
 /AGENTS.md
 /.agents/
 
@@ -38,9 +41,9 @@ local.properties
 /.playwright-mcp/
 /docs/icon-proposta/
 
-# APKs soltos na raiz — a release oficial vai pro GitHub Releases, não pro git.
+# Root APKs are release artifacts, not source.
 /*.apk
 
-# Scripts pessoais de instalação via ADB — só local, não versionados (pedido do usuário).
+# Personal ADB installation helpers stay local.
 /install.sh
 /scripts/

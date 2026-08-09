@@ -4,7 +4,7 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- painel de tras (origem): apenas contorno -->
+    <!-- Rear display outline. -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
@@ -12,7 +12,7 @@
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:pathData="M30,28 H62 A6,6 0 0 1 68,34 V54 A6,6 0 0 1 62,60 H30 A6,6 0 0 1 24,54 V34 A6,6 0 0 1 30,28 Z" />
-    <!-- painel da frente (destino): solido, oculta o canto do painel de tras -->
+    <!-- Solid front display. -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M44,44 H76 A6,6 0 0 1 82,50 V70 A6,6 0 0 1 76,76 H44 A6,6 0 0 1 38,70 V50 A6,6 0 0 1 44,44 Z" />

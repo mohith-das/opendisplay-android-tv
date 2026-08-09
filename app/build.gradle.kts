@@ -5,8 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// keystore.properties is gitignored (see CLAUDE.md) — a checkout without it
-// still builds (release just comes out unsigned) instead of failing.
+// Local and CI release signing use the same ignored properties file. A clean
+// checkout can still assemble an unsigned release for reproducible inspection.
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -14,15 +14,15 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "io.github.josepacelli.opendisplay"
+    namespace = "io.github.mohithdas.opendisplay.tv"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.josepacelli.opendisplay"
+        applicationId = "io.github.mohithdas.opendisplay.tv"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.0.5"
+        versionCode = 1
+        versionName = "0.1.0"
     }
 
     signingConfigs {
@@ -52,6 +52,12 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = true
     }
 
     packaging {
