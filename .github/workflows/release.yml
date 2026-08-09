@@ -13,8 +13,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Unit tests and release lint
+        run: ./gradlew testDebugUnitTest lintRelease
+      - name: Startup instrumentation on Android TV API 31
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 31
+          target: android-tv
+          arch: x86
+          profile: tv_1080p
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest
+
   release:
     if: github.repository == 'mohith-das/opendisplay-android-tv'
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -47,16 +77,50 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > keystore.properties
           chmod 600 keystore.properties
-      - name: Test, lint, and build signed release
-        run: ./gradlew testDebugUnitTest lintRelease assembleRelease
-      - name: Verify and checksum APK
+      - name: Build signed release
+        run: ./gradlew assembleRelease
+      - name: Verify version, package, launcher, signature, and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_PACKAGE: io.github.mohithdas.opendisplay.tv
+          EXPECTED_CERT_SHA256: 4cceafa2b86d9602b4b02429df74fffb0ed165ce9ae423e5105b85dd048a1943
         run: |
           set -euo pipefail
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk dist/OpenDisplay-TV.apk
+          APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
-          "$APKSIGNER" verify --verbose --print-certs dist/OpenDisplay-TV.apk
+          PACKAGE_ID="$($APKANALYZER manifest application-id dist/OpenDisplay-TV.apk)"
+          VERSION_CODE="$($APKANALYZER manifest version-code dist/OpenDisplay-TV.apk)"
+          VERSION_NAME="$($APKANALYZER manifest version-name dist/OpenDisplay-TV.apk)"
+          test "$PACKAGE_ID" = "$EXPECTED_PACKAGE"
+          test "$GITHUB_REF_NAME" = "v$VERSION_NAME"
+          MANIFEST="$($APKANALYZER manifest print dist/OpenDisplay-TV.apk)"
+          BADGING="$($AAPT dump badging dist/OpenDisplay-TV.apk)"
+          grep -q 'android.intent.category.LEANBACK_LAUNCHER' <<< "$MANIFEST"
+          grep -q "^application-label:'OpenDisplay TV'" <<< "$BADGING"
+          SIGNING_REPORT="$($APKSIGNER verify --verbose --print-certs dist/OpenDisplay-TV.apk)"
+          printf '%s\n' "$SIGNING_REPORT"
+          ACTUAL_CERT="$(printf '%s\n' "$SIGNING_REPORT" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]')"
+          test "$ACTUAL_CERT" = "$EXPECTED_CERT_SHA256"
+
+          PREVIOUS_TAG="$(gh release list --exclude-drafts --limit 100 --json tagName,publishedAt --jq \
+            "[.[] | select(.tagName != \"$GITHUB_REF_NAME\")] | sort_by(.publishedAt) | last | .tagName // empty")"
+          if [ -n "$PREVIOUS_TAG" ]; then
+            mkdir -p "$RUNNER_TEMP/previous"
+            gh release download "$PREVIOUS_TAG" --pattern OpenDisplay-TV.apk --dir "$RUNNER_TEMP/previous"
+            PREVIOUS_CODE="$($APKANALYZER manifest version-code "$RUNNER_TEMP/previous/OpenDisplay-TV.apk")"
+            test "$VERSION_CODE" -gt "$PREVIOUS_CODE"
+          else
+            test "$VERSION_CODE" -gt 0
+          fi
+
           (cd dist && sha256sum OpenDisplay-TV.apk > OpenDisplay-TV.apk.sha256)
+          (cd dist && sha256sum --check OpenDisplay-TV.apk.sha256)
+          cat > dist/release-notes.md <<'EOF'
+          Fixes the Android 11+ production startup crash and adds a secure, TV-friendly GitHub OTA updater. Version 0.1.0 cannot update itself and must be upgraded manually. See CHANGELOG.md and README.md for details.
+          EOF
       - name: Publish stable GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,6 +132,5 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" dist/OpenDisplay-TV.apk dist/OpenDisplay-TV.apk.sha256 \
               --verify-tag --latest --title "OpenDisplay TV $GITHUB_REF_NAME" \
-              --notes "Unofficial community Android TV receiver release. See CHANGELOG.md and README.md for features, installation, security, and known limitations."
+              --notes-file dist/release-notes.md
           fi
-

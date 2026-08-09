@@ -6,6 +6,8 @@
 
 Download **[OpenDisplay-TV.apk](https://github.com/mohith-das/opendisplay-android-tv/releases/latest/download/OpenDisplay-TV.apk)** from the latest stable release. The matching SHA-256 file is available beside it.
 
+> **Do not use v0.1.0 on Android 11 or newer.** Its foreground receiver crashes during startup. Version 0.1.0 cannot update itself because it closes before the updater can run, so install v0.1.1 manually. Version 0.1.1 and later can use the in-app updater.
+
 > **Unofficial community project.** OpenDisplay TV is not an official OpenDisplay Android application and is not maintained or endorsed by the original OpenDisplay authors. It is a community Android TV fork of [josepacelli/opendisplay-android](https://github.com/josepacelli/opendisplay-android), compatible with the protocol and Mac sender from [peetzweg/opendisplay](https://github.com/peetzweg/opendisplay).
 
 OpenDisplay TV turns an Android TV, Google TV, Onn streaming device, phone, or tablet into a real extended display for a Mac. It receives low-latency H.264 directly into Android's hardware `MediaCodec` decoder and renders to a `SurfaceView`. It does **not** use AirPlay, avoiding AirPlay receiver color-conversion issues and receiver-mode restrictions.
@@ -47,6 +49,18 @@ adb install OpenDisplay-TV.apk
 ```
 
 Future OpenDisplay TV releases signed with the same production key install with `adb install -r` and retain settings.
+
+### Upgrading from the broken v0.1.0 release
+
+Download the current `OpenDisplay-TV.apk` from the link at the top of this page and install it over v0.1.0. Both releases use the same package and production signing identity, so settings are retained:
+
+```bash
+adb install -r OpenDisplay-TV.apk
+```
+
+You can also open the downloaded APK with a TV file manager and approve the update. If Android blocks it, allow that file manager under **Settings → Apps → Special app access → Install unknown apps**. Do not wait for an update prompt from v0.1.0: the startup crash prevents its code from running.
+
+The crash was caused by receiver-service startup asking an application context for `Context.getDisplay()` and current window metrics on Android 11+. Those APIs require a visual display context. Version 0.1.1 uses service-safe `DisplayManager` data and conservative fallbacks until `MainActivity` supplies the accurate visual profile.
 
 ## Connect from a Mac
 
@@ -108,6 +122,28 @@ Phones and tablets default to **While connected**. The app uses `FLAG_KEEP_SCREE
 
 The optional performance overlay reports FPS, approximate network throughput, latency, RTT, and approximate Java heap use. Diagnostics also show receiver name, IP, listener port, TCP status, Bonjour status, connection state, selected output, fit mode, awake policy, and decoder resolution.
 
+## In-app updates
+
+Version 0.1.1 and later have a D-pad-friendly **Updates** section in **Settings & Diagnostics**. It shows the installed and latest versions, the last successful check, download progress, release notes, and clear retry states.
+
+- The app checks the latest stable GitHub release when opened, with a 24-hour throttle, and schedules a roughly daily WorkManager check that requires a network connection. It does not turn on or wake the television screen merely to check.
+- **Automatically check for updates** is enabled by default and can be disabled in Updates.
+- **Automatically download on unmetered networks** is opt-in. Downloads and installation offers are deferred while a Mac is streaming.
+- A completed background download creates a normal notification when Android permits notifications. It never launches the installer from the background.
+- **Remind me later** and **Skip this version** suppress repeat prompts for that version. A later release is still offered.
+
+The final update is never silent. Choose **Install update** in the foreground, then approve Android's package-installer screen with the D-pad and OK button. Installing briefly stops the receiver. On Android 8 or newer, the first attempt may open **Install unknown apps**; allow **OpenDisplay TV**, return to the app, and choose **Install update** again.
+
+Update checks use GitHub's public API anonymously. No GitHub token or repository credential is embedded in the APK. Before an install is offered, the app requires:
+
+- HTTPS and an approved GitHub API or release-asset host for every redirect.
+- Assets named exactly `OpenDisplay-TV.apk` and `OpenDisplay-TV.apk.sha256`.
+- A matching streamed SHA-256 checksum and, when GitHub supplies one, a matching GitHub asset digest.
+- Package ID `io.github.mohithdas.opendisplay.tv`, a higher `versionCode`, and a version name matching the stable release tag.
+- The same Android production signing identity, or a valid Android signing lineage, as the installed app.
+
+Rejected, incomplete, and abandoned downloads are deleted from app-private storage. Android's package manager performs its own final signature enforcement as well.
+
 ## Troubleshooting
 
 ### Listener does not start
@@ -129,6 +165,13 @@ The optional performance overlay reports FPS, approximate network throughput, la
 
 Use 1080p on capable TV sticks and 720p on lower-end or congested devices. **Fit** does not copy video frames; decoded frames remain in the hardware codec/surface pipeline. The receiver keeps bounded frame and cursor queues, releases codecs/sockets/surfaces on lifecycle changes, and avoids per-frame bitmap conversion. Memory use varies with vendor codec buffers, resolution, firmware, and reconnect history; the diagnostics value is an approximate Java heap reading, not a promise of total process memory.
 
+### Updates do not check, download, or install
+
+- GitHub connectivity can be blocked by DNS filters, firewalls, captive portals, or temporary anonymous API rate limits. The receiver remains usable; retry later or install the latest APK manually.
+- A checksum or GitHub digest failure means the file was rejected and deleted. Download only from this repository's stable release.
+- A signing mismatch means the candidate is not an update from the installed production identity. Do not bypass the warning; remove unofficial/debug variants and reinstall the trusted release manually if necessary.
+- If the installer does not open, choose **Install update** again and allow **OpenDisplay TV** under **Settings → Apps → Special app access → Install unknown apps**. Return to OpenDisplay TV afterward; installation always requires Android's confirmation.
+
 ## Build from source
 
 Install JDK 21 and Android SDK 36, then run:
@@ -137,6 +180,7 @@ Install JDK 21 and Android SDK 36, then run:
 git clone https://github.com/mohith-das/opendisplay-android-tv.git
 cd opendisplay-android-tv
 ./gradlew testDebugUnitTest lintDebug assembleDebug
+./gradlew connectedDebugAndroidTest  # with an API 30+ Android TV emulator running
 ```
 
 The debug APK is under `app/build/outputs/apk/debug/`. Release signing uses an ignored `keystore.properties` file pointing to a protected keystore outside the repository. CI restores the same PKCS#12 key from encrypted GitHub Actions secrets, signs the APK, verifies it with `apksigner`, and publishes `OpenDisplay-TV.apk` plus `OpenDisplay-TV.apk.sha256`. No keystore or signing password belongs in Git.
@@ -146,6 +190,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and [SECURITY.md](
 ## Known limitations
 
 - Physical Onn/Google TV behavior varies by firmware; complete the release checklist on the target device before relying on it unattended.
+- Android does not permit this sideloaded app to install an update silently; every update requires confirmation in Android's installer.
+- GitHub's anonymous API has rate limits, and managed networks may block its API or release-asset hosts.
 - Current upstream Mac code does not yet honor the hello `scale` field, as explained above.
 - The protocol has no pairing, authentication, encryption, or internet-safe transport.
 - H.264 capability reporting is vendor supplied; a device can claim a mode it cannot sustain at low latency.
