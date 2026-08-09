@@ -1,48 +1,19 @@
-# Security
+# Security policy
 
-## Reporting a vulnerability
+## Supported versions
 
-This is a small, unfunded open-source project with no bug bounty. If you find a security issue,
-please open a [GitHub issue](https://github.com/josepacelli/opendisplay-android/issues) or a
-private security advisory on the repository. Include steps to reproduce and, if possible, which
-finding ID below (if any) it relates to.
+Security fixes are applied to the latest release. Older APKs may not receive fixes.
 
-## Threat model, in short
+## Report a vulnerability
 
-- The Android app **listens** on a raw TCP socket (port 9000, no TLS) and the Mac **connects** to
-  it — same protocol as the original [OpenDisplay](https://github.com/peetzweg/opendisplay) Mac
-  app, unmodified. This is a deliberate, documented design choice (no account, no central server,
-  see the project README) and cannot diverge from it without breaking interoperability with the
-  Mac app.
-- The trust boundary is **the local network**: anyone who can reach the phone/tablet's IP on the
-  same WiFi (or a routed subnet) can connect to port 9000. There is no authentication of the peer
-  — this mirrors the upstream iOS client's behavior exactly, not a gap introduced by this port.
-- Given that boundary, findings below are classified by what an unauthenticated device on the same
-  network can actually do, not by internet-facing severity norms.
+Please use a [private GitHub security advisory](https://github.com/mohith-das/opendisplay-android-tv/security/advisories/new). Do not open a public issue for an unpatched vulnerability. Include affected versions, device/Android version, reproduction steps, impact, and a suggested mitigation when possible.
 
-## Security review — 2026-08-04
+This is a volunteer open-source project with no bug bounty. Reports will be acknowledged as time permits; coordinated disclosure is appreciated.
 
-Structured review against OWASP ASVS 4.0.3 / CWE Top 25, scoped to the network/protocol layer
-(`net/`, `protocol/`, `video/VideoDecoder.kt`, `service/ReceiverService.kt`,
-`ui/SettingsDialog.kt`, `ui/CursorOverlay.kt`, `ui/ReceiverScreen.kt`, `AndroidManifest.xml`,
-`gradle/libs.versions.toml`).
+## Trust boundary
 
-| ID | Title | Severity | CWE | Status |
-|---|---|---|---|---|
-| SCR-001 | No peer authentication on the control/video socket | Medium | CWE-306 | Accepted risk (inherited from upstream protocol) |
-| SCR-002 | Cursor sprite bitmap decoded without dimension validation | Medium | CWE-400 | Open — see [SDD.md](SDD.md) |
-| SCR-003 | Unvalidated `store` URL forwarded from an untrusted peer | Low | CWE-601 | Open — see [SDD.md](SDD.md) |
-| SCR-004 | Persistent install ID broadcast in cleartext over mDNS | Informational | CWE-200 | Accepted risk (required by protocol) |
-| SCR-005 | `allowBackup="true"` with no data extraction rules | Informational | CWE-312 | Open — see [SDD.md](SDD.md) |
-| SCR-006 | Listener bound to all network interfaces, not just WiFi | Informational | — | Accepted risk (required for the documented USB/`adb forward` path) |
+OpenDisplay's compatible wire protocol uses an unauthenticated, unencrypted TCP connection. OpenDisplay TV listens on one active local IPv4 interface and ports 9010–9029. Bonjour publishes the install ID and protocol version. These behaviors are required for compatibility with the current Mac sender.
 
-Remediation design for the three actionable findings (SCR-002, SCR-003, SCR-005) is in
-[`SDD.md`](SDD.md). SCR-001, SCR-004 and SCR-006 are accepted risks: fixing them would mean
-diverging from the wire protocol the Mac app speaks, which this project cannot do unilaterally
-(see `CLAUDE.md`'s "Protocolo — fonte da verdade" section).
+Use the receiver only on a trusted LAN. Guest networks, public Wi-Fi, routed untrusted subnets, and exposed port forwarding are unsafe. A reachable peer can attempt to connect, replace an active session, send control messages, and supply compressed media/cursor input to platform decoders.
 
-## What this app deliberately does not have
-
-No accounts, no telemetry, no central server, no TLS on the wire protocol — same philosophy as
-the original OpenDisplay project. Anything that requires the Mac app to change is out of scope
-for this repository.
+The app validates frame lengths, bounds cursor images, allow-lists update URLs, uses bounded queues, and surfaces peer replacement. Those defenses do not add authentication or encryption.

@@ -1,16 +1,11 @@
-# Build & Release
+# Build and release
 
-## Conta do GitHub CLI
+Development requires JDK 21 and Android SDK 36.
 
-Esta máquina tem mais de uma conta logada no `gh`. Releases e pushes deste repo devem ser feitos
-com a conta `josepacelli`, não com outra conta que esteja ativa no momento.
-
-Verificar qual conta está ativa:
-```sh
-gh auth status
+```bash
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-Trocar para `josepacelli`:
-```sh
-gh auth switch --hostname github.com --user josepacelli
-```
+Production releases use `keystore.properties`, which is ignored, to point at a protected PKCS#12 keystore stored outside this repository. The tag workflow restores that same key from encrypted GitHub Actions secrets, runs tests and release lint, signs and verifies the APK, generates its SHA-256 checksum, and publishes both files.
+
+See the build, signing, and contribution sections in [README.md](README.md) and [CONTRIBUTING.md](CONTRIBUTING.md). Never commit signing material, credentials, tokens, local SDK paths, or generated APKs.

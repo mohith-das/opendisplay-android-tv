@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible OpenDisplay TV problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not disclose security vulnerabilities here; use the private security advisory link in SECURITY.md.
+  - type: input
+    id: device
+    attributes:
+      label: Android device and firmware
+      placeholder: Onn 4K Pro, Android TV 14
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and OpenDisplay version
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - TCP listener
+        - Bonjour / discovery
+        - Video / decoder
+        - Settings / D-pad
+        - Sleep / wake
+        - Installation / upgrade
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and logs
+      description: Include TCP, Bonjour, resolution, scale, fit mode, decoder resolution, and redacted logcat output.
+  - type: checkboxes
+    id: trusted
+    attributes:
+      label: Checklist
+      options:
+        - label: I tested the latest release.
+          required: true
+        - label: I removed private tokens, credentials, and sensitive network details.
+          required: true
+

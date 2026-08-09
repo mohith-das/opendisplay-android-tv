@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose an Android TV receiver improvement
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What Android TV or receiver workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Protocol and device impact
+      description: Note any Mac-side change, decoder cost, low-memory impact, or D-pad behavior.
+

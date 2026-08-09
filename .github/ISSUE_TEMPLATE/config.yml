@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/mohith-das/opendisplay-android-tv/security/advisories/new
+    about: Report vulnerabilities privately.
+  - name: Original OpenDisplay project
+    url: https://github.com/peetzweg/opendisplay
+    about: Report Mac sender and original protocol issues upstream.
+
