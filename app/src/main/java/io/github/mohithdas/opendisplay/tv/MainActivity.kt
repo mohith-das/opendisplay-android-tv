@@ -31,10 +31,12 @@ import io.github.mohithdas.opendisplay.tv.settings.AwakePolicy
 import io.github.mohithdas.opendisplay.tv.settings.DisplayProfileProvider
 import io.github.mohithdas.opendisplay.tv.ui.ReceiverScreen
 import io.github.mohithdas.opendisplay.tv.ui.theme.OpenDisplayTheme
+import io.github.mohithdas.opendisplay.tv.update.UpdateManager
 import io.github.mohithdas.opendisplay.tv.util.Log
 
 /** UI host for the foreground receiver service. Leaving with Back never stops the service. */
 class MainActivity : ComponentActivity() {
+    private val updateManager by lazy { UpdateManager.get(applicationContext) }
     private var boundReceiver by mutableStateOf<PhoneReceiver?>(null)
     private var bound = false
     private var receiverVisible by mutableStateOf(false)
@@ -42,7 +44,7 @@ class MainActivity : ComponentActivity() {
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val receiver = (service as? ReceiverService.LocalBinder)?.receiver ?: return
-            receiver.updateDisplayProfile(DisplayProfileProvider.detect(this@MainActivity))
+            receiver.updateDisplayProfile(DisplayProfileProvider.detectActivity(this@MainActivity))
             boundReceiver = receiver
         }
 
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updateManager.initialize()
         enableEdgeToEdge()
         val serviceIntent = Intent(this, ReceiverService::class.java)
         startForegroundService(serviceIntent)
@@ -87,7 +90,7 @@ class MainActivity : ComponentActivity() {
                             clearKeepAwake()
                         }
                     }
-                    ReceiverScreen(receiver)
+                    ReceiverScreen(receiver, updateManager)
                 }
             }
         }
@@ -107,7 +110,7 @@ class MainActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         Log.info("configuration changed; recalculating display profile")
-        boundReceiver?.updateDisplayProfile(DisplayProfileProvider.detect(this))
+        boundReceiver?.updateDisplayProfile(DisplayProfileProvider.detectActivity(this))
     }
 
     override fun onDestroy() {

@@ -36,10 +36,11 @@ import io.github.mohithdas.opendisplay.tv.net.NsdState
 import io.github.mohithdas.opendisplay.tv.net.PeerSignal
 import io.github.mohithdas.opendisplay.tv.net.PhoneReceiver
 import io.github.mohithdas.opendisplay.tv.settings.FitMode
+import io.github.mohithdas.opendisplay.tv.update.UpdateManager
 import kotlin.math.roundToInt
 
 @Composable
-fun ReceiverScreen(receiver: PhoneReceiver) {
+fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager) {
     val listener by receiver.listenerState.collectAsState()
     val nsd by receiver.nsdState.collectAsState()
     val connected by receiver.connected.collectAsState()
@@ -101,7 +102,7 @@ fun ReceiverScreen(receiver: PhoneReceiver) {
         )
     }
 
-    if (showSettings) SettingsDialog(receiver) { showSettings = false }
+    if (showSettings) SettingsDialog(receiver, updateManager) { showSettings = false }
 }
 
 @Composable

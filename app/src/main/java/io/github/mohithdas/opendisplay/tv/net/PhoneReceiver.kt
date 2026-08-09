@@ -105,7 +105,10 @@ data class NsdState(
  * registration deliberately expose separate state: a bound socket is usable by manual IP even
  * when a vendor NSD implementation is failing.
  */
-class PhoneReceiver(context: Context) {
+class PhoneReceiver(
+    context: Context,
+    startupDisplayProfile: DisplayProfile? = null,
+) {
 
     companion object {
         const val DEFAULT_PORT = ListenerPortBinder.FIRST_PORT
@@ -136,7 +139,8 @@ class PhoneReceiver(context: Context) {
     private val sendLock = Any()
     private val preferences = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private var displayProfile = DisplayProfileProvider.detect(appContext)
+    private var displayProfile = startupDisplayProfile
+        ?: DisplayProfileProvider.detectServiceSafe(appContext)
     private val settingsRepository = ReceiverSettingsRepository(
         SharedPreferencesStorage(preferences),
         displayProfile.isTelevision,
@@ -268,12 +272,16 @@ class PhoneReceiver(context: Context) {
     }
 
     fun updateDisplayProfile(profile: DisplayProfile) {
+        val oldProfile = displayProfile
         displayProfile = profile
         _supportedResolutions.value = DisplaySelector.supportedChoices(profile)
         val old = _displaySelection.value
         val updated = resolveDisplaySelection()
         _displaySelection.value = updated
-        if (updated != old && connected.value) sendHello()
+        if (connected.value && (updated != old || profile != oldProfile)) {
+            Log.info("visual display profile updated; sending an updated hello")
+            sendHello()
+        }
     }
 
     fun updateSettings(updated: ReceiverSettings) {

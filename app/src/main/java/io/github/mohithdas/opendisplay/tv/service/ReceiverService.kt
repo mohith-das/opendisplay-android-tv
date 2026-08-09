@@ -10,13 +10,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import io.github.mohithdas.opendisplay.tv.MainActivity
 import io.github.mohithdas.opendisplay.tv.R
 import io.github.mohithdas.opendisplay.tv.net.PhoneReceiver
 import io.github.mohithdas.opendisplay.tv.util.Log
+import io.github.mohithdas.opendisplay.tv.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -60,7 +61,10 @@ class ReceiverService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         registerScreenReceiver()
         notificationJob = serviceScope.launch {
-            receiver.connected.collectLatest { updateNotification() }
+            receiver.connected.collectLatest { connected ->
+                UpdateManager.get(applicationContext).setStreaming(connected)
+                updateNotification()
+            }
         }
     }
 
@@ -86,7 +90,12 @@ class ReceiverService : Service() {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
         }
-        ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(screenReceiver, filter)
+        }
         screenReceiverRegistered = true
     }
 

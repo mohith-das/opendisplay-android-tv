@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,9 +48,10 @@ import io.github.mohithdas.opendisplay.tv.settings.FitMode
 import io.github.mohithdas.opendisplay.tv.settings.KeepAwakePolicy
 import io.github.mohithdas.opendisplay.tv.settings.ResolutionChoice
 import io.github.mohithdas.opendisplay.tv.settings.UiScaleChoice
+import io.github.mohithdas.opendisplay.tv.update.UpdateManager
 
 @Composable
-fun SettingsDialog(receiver: PhoneReceiver, onDismiss: () -> Unit) {
+fun SettingsDialog(receiver: PhoneReceiver, updateManager: UpdateManager, onDismiss: () -> Unit) {
     val currentName by receiver.serviceName.collectAsState()
     val settings by receiver.settings.collectAsState()
     val listener by receiver.listenerState.collectAsState()
@@ -56,15 +61,31 @@ fun SettingsDialog(receiver: PhoneReceiver, onDismiss: () -> Unit) {
     val decoder by receiver.decoderResolution.collectAsState()
     val supportedResolutions by receiver.supportedResolutions.collectAsState()
     var draftName by remember(currentName) { mutableStateOf(currentName) }
+    var editingName by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val saveNameFocusRequester = remember { FocusRequester() }
+    val editNameFocusRequester = remember { FocusRequester() }
     val manualAddressLabel = stringResource(R.string.manual_address)
     val addressCopiedMessage = stringResource(R.string.address_copied)
+
+    BackHandler(enabled = editingName) {
+        draftName = currentName
+        editingName = false
+    }
+    LaunchedEffect(editingName) {
+        if (editingName) saveNameFocusRequester.requestFocus()
+        else editNameFocusRequester.requestFocus()
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Surface(Modifier.fillMaxSize(), color = Color(0xFF09110E)) {
+        Surface(
+            Modifier.fillMaxSize(),
+            color = Color(0xFF09110E),
+            contentColor = Color.White,
+        ) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -82,15 +103,40 @@ fun SettingsDialog(receiver: PhoneReceiver, onDismiss: () -> Unit) {
                 }
                 Text(stringResource(R.string.settings_hint), color = Color.LightGray)
 
-                OutlinedTextField(
-                    value = draftName,
-                    onValueChange = { draftName = it.take(63) },
-                    label = { Text(stringResource(R.string.receiver_name)) },
-                    supportingText = { Text(stringResource(R.string.receiver_name_description)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
-                )
-                TvActionButton(stringResource(R.string.save), onClick = { receiver.setServiceName(draftName) })
+                if (editingName) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        TvActionButton(
+                            stringResource(R.string.save),
+                            onClick = {
+                                receiver.setServiceName(draftName)
+                                editingName = false
+                            },
+                            modifier = Modifier.focusRequester(saveNameFocusRequester),
+                        )
+                        TvActionButton(
+                            stringResource(R.string.cancel),
+                            onClick = {
+                                draftName = currentName
+                                editingName = false
+                            },
+                        )
+                    }
+                    OutlinedTextField(
+                        value = draftName,
+                        onValueChange = { draftName = it.take(63) },
+                        label = { Text(stringResource(R.string.receiver_name)) },
+                        supportingText = { Text(stringResource(R.string.receiver_name_description)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+                    )
+                } else {
+                    DiagnosticRow(stringResource(R.string.receiver_name), currentName)
+                    TvActionButton(
+                        stringResource(R.string.edit_receiver_name),
+                        onClick = { editingName = true },
+                        modifier = Modifier.focusRequester(editNameFocusRequester),
+                    )
+                }
 
                 SettingChoice(
                     stringResource(R.string.resolution),
@@ -128,6 +174,8 @@ fun SettingsDialog(receiver: PhoneReceiver, onDismiss: () -> Unit) {
                 ) {
                     receiver.updateSettings(settings.copy(performanceOverlay = !settings.performanceOverlay))
                 }
+
+                UpdatesSection(updateManager)
 
                 Text(
                     stringResource(R.string.diagnostics),
