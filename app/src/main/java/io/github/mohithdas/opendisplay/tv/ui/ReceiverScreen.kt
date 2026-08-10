@@ -1,8 +1,12 @@
 package io.github.mohithdas.opendisplay.tv.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,16 +18,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -37,6 +49,7 @@ import io.github.mohithdas.opendisplay.tv.net.PeerSignal
 import io.github.mohithdas.opendisplay.tv.net.PhoneReceiver
 import io.github.mohithdas.opendisplay.tv.settings.FitMode
 import io.github.mohithdas.opendisplay.tv.update.UpdateManager
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @Composable
@@ -49,14 +62,75 @@ fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager) {
     val selection by receiver.displaySelection.collectAsState()
     var videoDims by remember { mutableStateOf<VideoDims?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    var settingsButtonVisible by remember { mutableStateOf(true) }
+    var settingsButtonFocusPending by remember { mutableStateOf(false) }
+    var autoHideGeneration by remember { mutableIntStateOf(0) }
+    val receiverFocusRequester = remember { FocusRequester() }
+    val settingsButtonFocusRequester = remember { FocusRequester() }
 
     BackHandler(enabled = showSettings) { showSettings = false }
+
+    LaunchedEffect(connected, showSettings, autoHideGeneration) {
+        if (!SettingsButtonBehavior.shouldAutoHide(connected, showSettings)) {
+            settingsButtonVisible = true
+            if (!showSettings) settingsButtonFocusPending = true
+            return@LaunchedEffect
+        }
+
+        settingsButtonVisible = true
+        delay(SettingsButtonBehavior.AUTO_HIDE_DELAY_MILLIS)
+        if (connected && !showSettings) {
+            settingsButtonVisible = false
+            receiverFocusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(settingsButtonVisible, settingsButtonFocusPending) {
+        if (settingsButtonVisible && settingsButtonFocusPending) {
+            settingsButtonFocusRequester.requestFocus()
+            settingsButtonFocusPending = false
+        }
+    }
 
     Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .safeDrawingPadding(),
+            .safeDrawingPadding()
+            .onPreviewKeyEvent { event ->
+                val keyCode = event.nativeKeyEvent.keyCode
+                if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) {
+                    return@onPreviewKeyEvent false
+                }
+                if (SettingsButtonBehavior.opensSettings(keyCode)) {
+                    showSettings = true
+                    return@onPreviewKeyEvent true
+                }
+                if (connected && !showSettings && SettingsButtonBehavior.isRemoteInteraction(keyCode)) {
+                    val wasHidden = !settingsButtonVisible
+                    settingsButtonVisible = true
+                    autoHideGeneration++
+                    if (wasHidden && SettingsButtonBehavior.focusesRevealedButton(keyCode)) {
+                        settingsButtonFocusPending = true
+                        return@onPreviewKeyEvent true
+                    }
+                }
+                false
+            }
+            .pointerInput(connected, showSettings) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(PointerEventPass.Initial)
+                        if (connected && !showSettings) {
+                            settingsButtonVisible = true
+                            autoHideGeneration++
+                        }
+                    }
+                }
+            }
+            .focusRequester(receiverFocusRequester)
+            .focusProperties { canFocus = connected && !showSettings && !settingsButtonVisible }
+            .focusable(),
     ) {
         VideoViewport(
             receiver = receiver,
@@ -95,11 +169,18 @@ fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager) {
             PerfHud(receiver, Modifier.align(Alignment.TopStart).padding(8.dp))
         }
 
-        TvActionButton(
-            text = stringResource(R.string.settings),
-            onClick = { showSettings = true },
+        AnimatedVisibility(
+            visible = settingsButtonVisible && !showSettings,
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
-        )
+        ) {
+            TvActionButton(
+                text = stringResource(R.string.settings),
+                onClick = { showSettings = true },
+                modifier = Modifier.focusRequester(settingsButtonFocusRequester),
+            )
+        }
     }
 
     if (showSettings) SettingsDialog(receiver, updateManager) { showSettings = false }
