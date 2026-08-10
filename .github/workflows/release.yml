@@ -131,7 +131,7 @@ jobs:
           (cd dist && sha256sum OpenDisplay-TV.apk > OpenDisplay-TV.apk.sha256)
           (cd dist && sha256sum --check OpenDisplay-TV.apk.sha256)
           cat > dist/release-notes.md <<'EOF'
-          Adds an auto-hiding Settings control that returns on remote or pointer interaction, and clears the retained video frame after a Mac disconnects. Existing v0.1.1 installations can download and install this update through Settings & Diagnostics → Updates. Android still requires final installer confirmation. See CHANGELOG.md and README.md for details.
+          Fixes the in-app installer handoff crash by passing the real Activity to the updater instead of casting Compose's dialog-themed context. Version 0.1.1 and 0.1.2 users must install v0.1.3 manually; v0.1.3 and later can complete future updates in-app with Android's required final confirmation. Also includes the v0.1.2 auto-hiding Settings control and disconnect-frame clearing fixes. See CHANGELOG.md and README.md for details.
           EOF
       - name: Publish stable GitHub release
         env:

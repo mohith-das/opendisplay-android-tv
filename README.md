@@ -6,7 +6,7 @@
 
 Download **[OpenDisplay-TV.apk](https://github.com/mohith-das/opendisplay-android-tv/releases/latest/download/OpenDisplay-TV.apk)** from the latest stable release. The matching SHA-256 file is available beside it.
 
-> **Do not use v0.1.0 on Android 11 or newer.** Its foreground receiver crashes during startup. Version 0.1.0 cannot update itself because it closes before the updater can run, so install v0.1.1 manually. Version 0.1.1 and later can use the in-app updater.
+> **Upgrade older releases manually to v0.1.3.** Version 0.1.0 crashes during startup on Android 11 and newer. Versions 0.1.1 and 0.1.2 can securely find and download updates, but selecting **Install update** may crash during the Android installer handoff. Install v0.1.3 from the latest APK link above; v0.1.3 and later have the corrected end-to-end in-app updater.
 
 > **Unofficial community project.** OpenDisplay TV is not an official OpenDisplay Android application and is not maintained or endorsed by the original OpenDisplay authors. It is a community Android TV fork of [josepacelli/opendisplay-android](https://github.com/josepacelli/opendisplay-android), compatible with the protocol and Mac sender from [peetzweg/opendisplay](https://github.com/peetzweg/opendisplay).
 
@@ -124,7 +124,7 @@ The optional performance overlay reports FPS, approximate network throughput, la
 
 ## In-app updates
 
-Version 0.1.1 and later have a D-pad-friendly **Updates** section in **Settings & Diagnostics**. It shows the installed and latest versions, the last successful check, download progress, release notes, and clear retry states.
+Version 0.1.3 and later have a fully functional D-pad-friendly **Updates** section in **Settings & Diagnostics**. It shows the installed and latest versions, the last successful check, download progress, release notes, and clear retry states. Versions 0.1.1 and 0.1.2 must be upgraded to v0.1.3 manually because their final installer handoff can crash even after a download validates successfully.
 
 - The app checks the latest stable GitHub release when opened, with a 24-hour throttle, and schedules a roughly daily WorkManager check that requires a network connection. It does not turn on or wake the television screen merely to check.
 - **Automatically check for updates** is enabled by default and can be disabled in Updates.
@@ -171,6 +171,7 @@ Use 1080p on capable TV sticks and 720p on lower-end or congested devices. **Fit
 - A checksum or GitHub digest failure means the file was rejected and deleted. Download only from this repository's stable release.
 - A signing mismatch means the candidate is not an update from the installed production identity. Do not bypass the warning; remove unofficial/debug variants and reinstall the trusted release manually if necessary.
 - If the installer does not open, choose **Install update** again and allow **OpenDisplay TV** under **Settings → Apps → Special app access → Install unknown apps**. Return to OpenDisplay TV afterward; installation always requires Android's confirmation.
+- If version 0.1.1 or 0.1.2 closes when **Install update** is selected, download v0.1.3 manually from the link at the top of this README and install it over the existing production app. Settings are preserved because the package and signing identity are unchanged.
 
 ## Build from source
 

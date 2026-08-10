@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. Versions follow semantic versioning.
 
+## [0.1.3] - 2026-08-09
+
+### Fixed
+
+- Fixed the in-app installer handoff crash caused by treating Compose's dialog-themed context as an Activity. The actual `MainActivity` is now passed explicitly to the updater, so the **Install unknown apps** and Android package-installer screens open safely on TV devices.
+
+### Upgrade note
+
+- Versions 0.1.1 and 0.1.2 can securely find and download an update but may crash when **Install update** is selected. Install v0.1.3 manually; v0.1.3 and later have the corrected end-to-end updater flow.
+
 ## [0.1.2] - 2026-08-09
 
 ### Changed
@@ -57,3 +67,4 @@ All notable changes to this project are documented here. Versions follow semanti
 [0.1.0]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.0
 [0.1.1]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.1
 [0.1.2]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.2
+[0.1.3]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.3
