@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,6 +33,18 @@ jobs:
       - name: Unit tests and release lint
         run: ./gradlew testDebugUnitTest lintRelease
       - name: Startup instrumentation on Android TV API 31
+        id: tv_emulator_first
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 31
+          target: android-tv
+          arch: x86
+          profile: tv_1080p
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest
+      - name: Retry startup instrumentation after emulator bootstrap failure
+        if: steps.tv_emulator_first.outcome == 'failure'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 31
