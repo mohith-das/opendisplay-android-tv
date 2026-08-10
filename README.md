@@ -92,7 +92,7 @@ Quit and reopen OpenDisplay again after deleting the values.
 
 ## TV settings
 
-Every control has an Android TV focus outline and works with a D-pad and OK button. **Settings** remains available while disconnected, listening, or streaming. Back closes settings first; leaving the Activity does not accidentally stop the foreground receiver.
+Every control has an Android TV focus outline and works with a D-pad and OK button. **Settings** remains visible while disconnected and fades out after five seconds of connected inactivity. Any remote-key, touch, mouse, or air-mouse interaction reveals it again; D-pad/OK focuses it, while Menu/Settings opens the dialog directly. Back closes settings first; leaving the Activity does not accidentally stop the foreground receiver. Disconnecting clears the retained video frame and returns to an opaque black listener screen.
 
 ### Resolution and UI scale
 

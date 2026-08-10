@@ -131,7 +131,7 @@ jobs:
           (cd dist && sha256sum OpenDisplay-TV.apk > OpenDisplay-TV.apk.sha256)
           (cd dist && sha256sum --check OpenDisplay-TV.apk.sha256)
           cat > dist/release-notes.md <<'EOF'
-          Fixes the Android 11+ production startup crash and adds a secure, TV-friendly GitHub OTA updater. Version 0.1.0 cannot update itself and must be upgraded manually. See CHANGELOG.md and README.md for details.
+          Adds an auto-hiding Settings control that returns on remote or pointer interaction, and clears the retained video frame after a Mac disconnects. Existing v0.1.1 installations can download and install this update through Settings & Diagnostics → Updates. Android still requires final installer confirmation. See CHANGELOG.md and README.md for details.
           EOF
       - name: Publish stable GitHub release
         env:

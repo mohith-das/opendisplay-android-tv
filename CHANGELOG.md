@@ -2,11 +2,14 @@
 
 All notable changes to this project are documented here. Versions follow semantic versioning.
 
-## Unreleased
+## [0.1.2] - 2026-08-09
 
 ### Changed
 
 - The Settings button now fades out after five seconds of inactivity while connected. Any remote-key or pointer interaction reveals it and restarts the timer; D-pad/OK focuses it, and Menu/Settings opens the dialog directly.
+
+### Fixed
+
 - Disconnecting now clears the retained hardware-decoder frame and shows an opaque black listener screen instead of leaving the last streamed image visible.
 
 ## [0.1.1] - 2026-08-09
@@ -53,3 +56,4 @@ All notable changes to this project are documented here. Versions follow semanti
 
 [0.1.0]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.0
 [0.1.1]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.1
+[0.1.2]: https://github.com/mohith-das/opendisplay-android-tv/releases/tag/v0.1.2
