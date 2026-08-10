@@ -1,5 +1,6 @@
 package io.github.mohithdas.opendisplay.tv.ui
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -53,7 +54,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @Composable
-fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager) {
+fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager, activity: Activity) {
     val listener by receiver.listenerState.collectAsState()
     val nsd by receiver.nsdState.collectAsState()
     val connected by receiver.connected.collectAsState()
@@ -186,7 +187,7 @@ fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager) {
         }
     }
 
-    if (showSettings) SettingsDialog(receiver, updateManager) { showSettings = false }
+    if (showSettings) SettingsDialog(receiver, updateManager, activity) { showSettings = false }
 }
 
 @Composable

@@ -1,5 +1,6 @@
 package io.github.mohithdas.opendisplay.tv.ui
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -51,7 +52,12 @@ import io.github.mohithdas.opendisplay.tv.settings.UiScaleChoice
 import io.github.mohithdas.opendisplay.tv.update.UpdateManager
 
 @Composable
-fun SettingsDialog(receiver: PhoneReceiver, updateManager: UpdateManager, onDismiss: () -> Unit) {
+fun SettingsDialog(
+    receiver: PhoneReceiver,
+    updateManager: UpdateManager,
+    activity: Activity,
+    onDismiss: () -> Unit,
+) {
     val currentName by receiver.serviceName.collectAsState()
     val settings by receiver.settings.collectAsState()
     val listener by receiver.listenerState.collectAsState()
@@ -175,7 +181,7 @@ fun SettingsDialog(receiver: PhoneReceiver, updateManager: UpdateManager, onDism
                     receiver.updateSettings(settings.copy(performanceOverlay = !settings.performanceOverlay))
                 }
 
-                UpdatesSection(updateManager)
+                UpdatesSection(updateManager, activity)
 
                 Text(
                     stringResource(R.string.diagnostics),

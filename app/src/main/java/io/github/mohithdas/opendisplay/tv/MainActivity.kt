@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
                             clearKeepAwake()
                         }
                     }
-                    ReceiverScreen(receiver, updateManager)
+                    ReceiverScreen(receiver, updateManager, this@MainActivity)
                 }
             }
         }

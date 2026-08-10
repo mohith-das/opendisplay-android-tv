@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mohithdas.opendisplay.tv.R
@@ -32,9 +31,8 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun UpdatesSection(manager: UpdateManager) {
+fun UpdatesSection(manager: UpdateManager, activity: Activity) {
     val state by manager.state.collectAsState()
-    val context = LocalContext.current
     var installerMessage by remember { mutableStateOf<Int?>(null) }
 
     Column(
@@ -104,7 +102,7 @@ fun UpdatesSection(manager: UpdateManager) {
                 Text(stringResource(R.string.install_after_disconnect), color = Color(0xFFFFC857))
             } else {
                 TvActionButton(stringResource(R.string.install_update), onClick = {
-                    installerMessage = when (manager.launchInstaller(context as Activity)) {
+                    installerMessage = when (manager.launchInstaller(activity)) {
                         InstallLaunchResult.PERMISSION_REQUIRED -> R.string.install_permission_instructions
                         InstallLaunchResult.DEFERRED_STREAMING -> R.string.install_after_disconnect
                         InstallLaunchResult.FILE_MISSING -> R.string.update_file_missing
