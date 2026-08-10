@@ -147,6 +147,9 @@ fun ReceiverScreen(receiver: PhoneReceiver, updateManager: UpdateManager) {
         )
 
         if (!connected) {
+            // SurfaceView owns a separate compositor surface and can retain its last buffer.
+            // Keep an opaque app-layer scrim above it so a disconnected peer is never shown.
+            Box(Modifier.fillMaxSize().background(Color.Black))
             Text(
                 text = listenerStatus(listener),
                 color = Color.White,

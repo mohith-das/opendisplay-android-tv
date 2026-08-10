@@ -168,6 +168,13 @@ class VideoDecoder(
         codec = null
     }
 
+    /** Releases decoder resources and forgets stream headers after a peer disconnects. */
+    fun reset() {
+        release()
+        currentSps = null
+        currentPps = null
+    }
+
     companion object {
         private val START_CODE = byteArrayOf(0, 0, 0, 1)
     }

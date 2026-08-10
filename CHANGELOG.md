@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Versions follow semanti
 ### Changed
 
 - The Settings button now fades out after five seconds of inactivity while connected. Any remote-key or pointer interaction reveals it and restarts the timer; D-pad/OK focuses it, and Menu/Settings opens the dialog directly.
+- Disconnecting now clears the retained hardware-decoder frame and shows an opaque black listener screen instead of leaving the last streamed image visible.
 
 ## [0.1.1] - 2026-08-09
 
